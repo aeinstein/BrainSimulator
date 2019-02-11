@@ -30,3 +30,5 @@ doc.xml
 /Sources/Modules/School/Module/conf/doc.xml
 
 Sources/Modules/PythonModule/
+.*
+/Sources/MigrationBackup

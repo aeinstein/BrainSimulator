@@ -591,7 +591,7 @@ namespace GoodAI.Modules.NeuralNetwork.Group
                 float diceRoll = (float)Rand.NextDouble();
 
                 // convert diceroll to parameter to sample
-                int w = (int)Math.Floor(diceRoll / sampleProbability);
+                int w = (int)System.Math.Floor(diceRoll / sampleProbability);
                 if (w >= Owner.TotalWeights)
                 {
                     if (w > Owner.TotalWeights)
@@ -613,7 +613,7 @@ namespace GoodAI.Modules.NeuralNetwork.Group
                         {
                             weightLayer.Weights.SafeCopyToHost(w, 1); // copy this weight to host
                             float originalWeight = weightLayer.Weights.Host[w]; // save weight
-                            float stepSize = Math.Abs(originalWeight) * RelativeStepSize; // set stepSize
+                            float stepSize = System.Math.Abs(originalWeight) * RelativeStepSize; // set stepSize
 
                             // get errorPlus
                             weightLayer.Weights.Host[w] = originalWeight + stepSize; // increase weight
@@ -659,8 +659,8 @@ namespace GoodAI.Modules.NeuralNetwork.Group
                                 MyLog.DEBUG.WriteLine("t: " + SimulationStep + " id: " + weightLayer.Id + " w" + w + ": " + weightLayer.Weights.Host[w] + " step: " + stepSize + " analytical gradient is 0.");
                                 break; // continue to next sample
                             }
-                            absoluteDiff = Math.Abs(numericalGradient - analyticalGradient);
-                            relativeDiff = absoluteDiff / (Math.Abs(numericalGradient) + Math.Abs(analyticalGradient));
+                            absoluteDiff = System.Math.Abs(numericalGradient - analyticalGradient);
+                            relativeDiff = absoluteDiff / (System.Math.Abs(numericalGradient) + System.Math.Abs(analyticalGradient));
                             if (relativeDiff > maxRelDiff && absoluteDiff > ThresholdAbsolute)
                             {
                                 maxAbsDiff = absoluteDiff;

@@ -88,30 +88,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\BinaryLibs\BEPUphysics\BEPUutilities.dll</HintPath>
     </Reference>
-    <Reference Include="CudaBlas, Version=8.0.13.0, Culture=neutral, PublicKeyToken=539d54d12e99fedb, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\ManagedCuda-CUBLAS.8.0.13\lib\net45\CudaBlas.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="CudaFFT, Version=8.0.13.0, Culture=neutral, PublicKeyToken=f066edfa1acb2f23, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\ManagedCuda-CUFFT.8.0.13\lib\net45\CudaFFT.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="CudaRand, Version=8.0.13.0, Culture=neutral, PublicKeyToken=fe981579f4e9a066, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\ManagedCuda-CURAND.8.0.13\lib\net45\CudaRand.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="ManagedCuda, Version=8.0.13.0, Culture=neutral, PublicKeyToken=242d898828717aa0, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\packages\ManagedCuda-80.8.0.13\lib\net45\ManagedCuda.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="OpenTK, Version=1.1.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\OpenTK.1.1.2225.0\lib\net20\OpenTK.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
@@ -348,7 +324,7 @@
     <None Include="..\Cuda\Transforms\Transform2DKernels.cu">
       <Link>Transform2DKernels.cu</Link>
     </None>
-    <None Include="packages.config" />
+    <None Include="app.config" />
     <None Include="post_build.cmd" />
   </ItemGroup>
   <ItemGroup>
@@ -743,7 +719,23 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <PackageReference Include="ManagedCuda-100">
+      <Version>10.0.31</Version>
+    </PackageReference>
+    <PackageReference Include="ManagedCuda-CUBLAS">
+      <Version>10.0.31</Version>
+    </PackageReference>
+    <PackageReference Include="ManagedCuda-CUFFT">
+      <Version>10.0.31</Version>
+    </PackageReference>
+    <PackageReference Include="ManagedCuda-CURAND">
+      <Version>10.0.31</Version>
+    </PackageReference>
+    <PackageReference Include="OpenTK">
+      <Version>1.1.2225</Version>
+    </PackageReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>"$(ProjectDir)post_build.cmd" "$(SolutionDir)" "$(ProjectDir)" "$(OutDir)" "$(Configuration)"</PostBuildEvent>

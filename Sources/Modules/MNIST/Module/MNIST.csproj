@@ -35,9 +35,8 @@
     <NoWarn>1591,1573</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ManagedCuda">
-      <HintPath>..\..\..\packages\ManagedCuda-80.8.0.13\lib\net45\ManagedCuda.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="ManagedCuda, Version=10.0.31.0, Culture=neutral, PublicKeyToken=242d898828717aa0, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\ManagedCuda-100.10.0.31\lib\net45\ManagedCuda.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

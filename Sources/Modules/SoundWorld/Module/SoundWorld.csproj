@@ -38,14 +38,6 @@
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CudaFFT">
-      <HintPath>..\..\..\packages\ManagedCuda-CUFFT.8.0.13\lib\net45\CudaFFT.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="ManagedCuda">
-      <HintPath>..\..\..\packages\ManagedCuda-80.8.0.13\lib\net45\ManagedCuda.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Design" />
@@ -88,7 +80,6 @@
     <Content Include="res\Digits_en.wav" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="post_build.cmd" />
   </ItemGroup>
   <ItemGroup>
@@ -102,6 +93,14 @@
       <Name>Core</Name>
       <Private>False</Private>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ManagedCuda-100">
+      <Version>10.0.31</Version>
+    </PackageReference>
+    <PackageReference Include="ManagedCuda-CUFFT">
+      <Version>10.0.31</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

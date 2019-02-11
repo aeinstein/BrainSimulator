@@ -211,7 +211,7 @@ namespace GoodAI.Modules.GeneticWorld
                 constructLayerList(nn);
 
                 // This is how big the weight matrix will be
-                arr_size = (int)Math.Ceiling(Math.Sqrt(m_weights));
+                arr_size = (int)System.Math.Ceiling(System.Math.Sqrt(m_weights));
 
                 // Get the relevant execution plan
                 m_executionPlan = Owner.Owner.SimulationHandler.Simulation.ExecutionPlan;
@@ -444,8 +444,8 @@ namespace GoodAI.Modules.GeneticWorld
                     len = newlen;
                 }
 
-                MyLog.INFO.WriteLine("Top {0} networks:", Math.Max(Owner.Survivors, Owner.PopulationSize / 10));
-                for (int i = 0; i < Math.Max(Owner.Survivors, Owner.PopulationSize / 10); i++)
+                MyLog.INFO.WriteLine("Top {0} networks:", System.Math.Max(Owner.Survivors, Owner.PopulationSize / 10));
+                for (int i = 0; i < System.Math.Max(Owner.Survivors, Owner.PopulationSize / 10); i++)
                 {
                     MyLog.INFO.Write("Fitness of network {0} is: {1}", i, fitnesses.Host[i]);
                     if (i < Owner.Survivors)

@@ -128,7 +128,7 @@ namespace GoodAI.Modules.NeuralNetwork.Tasks
 
                 for (int i = 0; i < f.Length; i++)
                 {
-                    float exp = (float) Math.Exp(f[i] - max);
+                    float exp = (float) System.Math.Exp(f[i] - max);
                     f[i] = exp;
                     expSum += exp;
                 }

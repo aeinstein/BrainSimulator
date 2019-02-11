@@ -2,19 +2,14 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Drawing;
-using System.Drawing.Imaging;
 
-using GoodAI.Core;
 using GoodAI.Core.Memory;
 using GoodAI.Core.Nodes;
 using GoodAI.Core.Task;
 using GoodAI.Core.Utils;
-using ManagedCuda;
 using YAXLib;
 
-using ManagedCuda.VectorTypes;
-using GoodAI.Core.Execution;
-using System.Text;
+using System.IO;
 
 //namespace GoodAI.Modules.Vision
 namespace HTSLmodule.Worlds
@@ -42,7 +37,7 @@ namespace HTSLmodule.Worlds
     public class MyAnimationPredictionWorld : MyWorld
     {
         #region parameters
-        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 64)]
+        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 320)]
         public int ImageWidth
         {
             get { return m_iw; }
@@ -56,7 +51,7 @@ namespace HTSLmodule.Worlds
         }
         private int m_iw;
 
-        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 64)]
+        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 160)]
         public int ImageHeight
         {
             get { return m_ih; }
@@ -73,13 +68,14 @@ namespace HTSLmodule.Worlds
         [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = false)]
         public bool UseCustomDataset { get; set; }
 
-        [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = 18)]
+        [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = 0),
+        Description("Max Number of Files, 0 for disabled")]
         public int NumFrames
         {
             get { return m_numFrames; }
             set
             {
-                if (value > 0)
+                if (value >= 0)
                 {
                     m_numFrames = value;
                 }
@@ -87,38 +83,37 @@ namespace HTSLmodule.Worlds
         }
         private int m_numFrames;
 
-        [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = "userDefinedPath\\NamePrefix_"),
+
+        [MyBrowsable, Category("Params"), YAXSerializableField(DefaultValue = false),
+        Description("Import all 3 Channels")]
+        public Boolean IsRGB { get; set; }
+        //private Boolean m_isRGB = false;
+
+        [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ""),
         Description("Path to files including the name prefix")]
         public String RootFileName { get; set; }
 
-        [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ".png")]
-        public String Extension { get; set; }
+        [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ""),
+        Description("file name has the following form: {search}_*.{Extension}.")]
+        public String Search { get; set; }
 
-        [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = 5),
-        Description("file name has the following form: namePrefix_[numDigits].png. Files are numbered sequentially from 0.")]
-        public int Digits
-        {
-            get { return m_digits; }
-            set
-            {
-                if (value > 0)
-                {
-                    m_digits = value;
-                }
-            }
-        }
-        private int m_digits;
+        [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = "jpg"),
+        Description("Example: jpg")]
+        public String Extension { get; set; }
 
         #endregion
 
-        private int m_defNumFrames = 17;
-        private String m_defRootFileName = MyResources.GetMyAssemblyPath() + "\\" + @"\res\animationpredictionworld\SwitchTest_";
-        private int m_defDigits = 5;
-        private String m_defExtension = ".png";
-        private int m_defImageWidth = 64;
-        private int m_defImageHeight = 64;
+        private int m_defNumFrames = 0;
+        private String m_defRootFileName = MyResources.GetMyAssemblyPath() + "\\" + @"\res\animationpredictionworld\";
+        private String m_defExtension = "png";
+        private String m_defSearch = "SwitchTest_";
+        private bool m_defIsRGB = false;
+        //private int m_defImageWidth = 320;
+        //private int m_defImageHeight = 160;
 
         private int m_currentFrame;
+        private int m_steps = 1;
+        
 
         [MyOutputBlock(0)]
         public MyMemoryBlock<float> Image
@@ -134,8 +129,18 @@ namespace HTSLmodule.Worlds
 
         public override void UpdateMemoryBlocks()
         {
-            Image.ColumnHint = ImageWidth;
-            Image.Count = ImageWidth * ImageHeight;
+            if(IsRGB)
+            {
+                //Image.ColumnHint = ImageWidth * 3;
+                Image.Count = ImageWidth * ImageHeight * 3;
+                Image.Dims = new TensorDimensions(ImageWidth, ImageHeight, 3);
+            } else
+            {
+                //Image.ColumnHint = ImageWidth;
+                Image.Count = ImageWidth * ImageHeight;
+                Image.Dims = new TensorDimensions(ImageWidth, ImageHeight);
+            }
+                
         }
 
         public override void Validate(MyValidator validator)
@@ -146,22 +151,22 @@ namespace HTSLmodule.Worlds
             {
                 try
                 {
-                    this.m_bitmaps = LoadBitmaps(NumFrames, RootFileName, Digits, Extension);
+                    this.m_bitmaps = LoadBitmaps(NumFrames, RootFileName, Search, Extension);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
                     validator.AddWarning(this, "Loading default dataset, cause: "+ e.Message);
-                    UseDefaultBitmaps();
+                    //UseDefaultBitmaps();
                 }
                 catch(IndexOutOfRangeException e)
                 {
                     validator.AddWarning(this, "Loading the default dataset, cause: "+e.Message);
-                    UseDefaultBitmaps();
+                    //UseDefaultBitmaps();
                 }
                 catch (Exception)
                 {
                     validator.AddWarning(this, "Loading the default dataset, cause: could not read file(s)");
-                    UseDefaultBitmaps();
+                    //UseDefaultBitmaps();
                 }
             }
             else
@@ -172,33 +177,64 @@ namespace HTSLmodule.Worlds
 
         private void UseDefaultBitmaps()
         {
-            NumFrames = m_defNumFrames;
-            ImageWidth = m_defImageWidth;
-            ImageHeight = m_defImageHeight;
+            NumFrames = 18;
+            ImageWidth = 64;
+            ImageHeight = 64;
             m_currentFrame = 0;
-            this.m_bitmaps = LoadBitmaps(NumFrames, m_defRootFileName, m_defDigits, m_defExtension);
+            IsRGB = false;
+            this.m_bitmaps = LoadBitmaps(m_defNumFrames, m_defRootFileName, m_defSearch, m_defExtension);
         }
 
-        private Bitmap[] LoadBitmaps(int numFrames, String rootFileName, int digits, String extension)
+        private Bitmap[] LoadBitmaps(int numFrames, String rootFileName, String search, String extension)
         {
-            Bitmap[] bitmaps = new Bitmap[numFrames];
-            String fileName = "";
+            MyLog.INFO.WriteLine("opening: " + rootFileName);
 
-            if (numFrames >= Math.Pow(10, digits))
+            DirectoryInfo d = new DirectoryInfo(rootFileName);//Assuming Test is your Folder
+            FileInfo[] Files = d.GetFiles(search + "*." + extension); //Getting Text files
+
+            int tmpNumFrames = Files.Length;
+
+            if(tmpNumFrames == 0)
             {
-                throw new ArgumentOutOfRangeException("Number of frames (" + numFrames + ") will not fit in given number of digits (" + digits + ")!");
+                MyLog.WARNING.WriteLine("No Images found in:" + rootFileName);
+                return new Bitmap[0];
+                
             }
 
-            for (int i = 0; i < bitmaps.Length; i++)
+            Bitmap[] bitmaps;
+            if (numFrames > 0)
             {
-                fileName = rootFileName + i.ToString().PadLeft(digits, '0') + extension;
+                bitmaps = new Bitmap[numFrames];
+            } else
+            {
+                bitmaps = new Bitmap[tmpNumFrames];
+            }
+            
+            String fileName = "";
+
+
+            int i = 0;
+            foreach (FileInfo file in Files)
+            {
+                fileName = rootFileName + file.Name;
+
+                MyLog.INFO.WriteLine("loading: " + fileName);
+
                 bitmaps[i] = new Bitmap(fileName);
 
                 if (bitmaps[i].Width != ImageWidth || bitmaps[i].Height != ImageHeight)
                 {
-                    throw new IndexOutOfRangeException("Incorrect width or height of a given image");
+                    throw new IndexOutOfRangeException("Incorrect width or height of a given image: " + fileName);
+                }
+
+                i++;
+                if(numFrames > 0 && i >= numFrames -1)
+                {
+                    MyLog.INFO.WriteLine(numFrames + " loaded");
+                    return bitmaps;
                 }
             }
+
             return bitmaps;
         }
 
@@ -209,42 +245,22 @@ namespace HTSLmodule.Worlds
         [Description("Reload images."), MyTaskInfo(Disabled = true)]
         public class MyAnimationPredictionLoadTask : MyTask<MyAnimationPredictionWorld>
         {
-            [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = "userDefinedPath\\NamePrefix_"),
+            [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ""),
             Description("Path to files with file name prefix")]
             public String RootFileName { get; set; }
 
-            [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ".png")]
+            [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ""),
+            Description("file name has the following form: {search}_*.{Extension}.")]
+            public String Search { get; set; }
+
+            [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = "jpg"),
+            Description("Example: jpg")]
             public String Extension { get; set; }
 
-            [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = 18)]
-            public int NumFrames
-            {
-                get { return m_numFrames; }
-                set
-                {
-                    if (value > 0)
-                    {
-                        m_numFrames = value;
-                    }
-                }
-            }
-            private int m_numFrames;
-
-            [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = 5),
-            Description("File name has the following form: namePrefix_[numDigits].png. Files are numbered sequentially from 0.")]
-            public int Digits
-            {
-                get { return m_digits; }
-                set
-                {
-                    if (value > 0)
-                    {
-                        m_digits = value;
-                    }
-                }
-            }
-            private int m_digits;
-            
+            [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = 0),
+            Description("Max Number of Files, 0 for disabled")]
+            public int NumFrames { get; set; }
+      
             public override void Init(int nGPU)
             {
             }
@@ -253,7 +269,7 @@ namespace HTSLmodule.Worlds
             {
                 try
                 {
-                    Owner.m_bitmaps = Owner.LoadBitmaps(NumFrames, RootFileName, Digits, Extension);
+                    Owner.m_bitmaps = Owner.LoadBitmaps(NumFrames, RootFileName, Search, Extension);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -282,11 +298,17 @@ namespace HTSLmodule.Worlds
             Description("Continue from the current frame after restarting the simulation?")]
             public bool StartFromFirstFrame { get; set; }
 
+            [MyBrowsable, Category("Params"), YAXSerializableField(DefaultValue = 1),
+            Description("Number of Steps one image is visible")]
+            public int ExpositionTime { get; set; }
+
+
             float[] image;
             byte[] byteArray;
-
             public override void Init(int nGPU)
             {
+                Owner.m_steps = ExpositionTime;
+
                 if (StartFromFirstFrame)
                 {
                     Owner.m_currentFrame = 0;
@@ -296,27 +318,57 @@ namespace HTSLmodule.Worlds
             // Could be optimized so that the images are located at GPU, but the dataset may not potentially fit into the GPU memory.
             public override void Execute()
             {
-                if (Owner.m_currentFrame >= Owner.m_bitmaps.Count())
+                if (Owner.m_currentFrame >= Owner.m_bitmaps.Count() -1)
                 {
                     Owner.m_currentFrame = 0;
                 }
 
+                MyLog.DEBUG.WriteLine("images: " + Owner.m_bitmaps.Count());
+                //MyLog.DEBUG.WriteLine("current image: " + Owner.m_currentFrame);
+
                 image = new float[Owner.Image.Count];
 
-                for (int x = 0; x < Owner.ImageWidth; x++)
-                    for (int y = 0; y < Owner.ImageHeight; y++)
+                int blocksize = Owner.ImageWidth * Owner.ImageHeight;
+
+                for (int y = 0; y < Owner.ImageHeight; y++)
+                {
+                    int offset = y * Owner.ImageWidth;
+
+                    for (int x = 0; x < Owner.ImageWidth; x++)
                     {
                         Color c = Owner.m_bitmaps[Owner.m_currentFrame].GetPixel(x, y);
 
-                        image[x + y * Owner.ImageWidth] = 0.333f * (c.R / 255.0f + c.G / 255.0f + c.B / 255.0f);
+                        if (Owner.IsRGB)
+                        {
+                            image[x + offset] = c.R / 255.0f;
+                            image[x + offset + blocksize] = c.G / 255.0f;
+                            image[x + offset + blocksize *2] = c.B / 255.0f;
+                        }
+                        else
+                        {
+                            // convert to Black/White
+                            image[y * Owner.ImageWidth + x] = 0.333f * (c.R / 255.0f + c.G / 255.0f + c.B / 255.0f);
+                        }
                     }
+                }
 
+                
                 // Create memory block from data
                 byteArray = new byte[image.Length * 4];
                 Buffer.BlockCopy(image, 0, byteArray, 0, byteArray.Length);
                 Owner.Image.Fill(byteArray);
 
-                Owner.m_currentFrame++;
+                if(ExpositionTime > 0)
+                {
+                    if (Owner.m_steps == 0)
+                    {
+                        Owner.m_currentFrame++;
+                        Owner.m_steps = ExpositionTime;
+
+                    }
+                    else
+                        Owner.m_steps--;
+                }  
             }
         }
     }
