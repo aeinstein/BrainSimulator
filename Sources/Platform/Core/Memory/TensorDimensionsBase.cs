@@ -3,10 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using GoodAI.Core.Memory;
-using GoodAI.Core.Utils;
 
 namespace GoodAI.Core.Memory
 {
@@ -73,6 +69,18 @@ namespace GoodAI.Core.Memory
         public int Rank
         {
             get { return IsEmpty ? 1 : m_dims.Count; }
+        }
+
+        public int GetSize()
+        {
+            int size = 0;
+            foreach (var item in m_dims)
+            {
+                if (size == 0) size = item;
+                else size *= item;
+            }
+    
+            return size;
         }
 
         /// <summary>

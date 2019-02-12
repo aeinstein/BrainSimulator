@@ -10,6 +10,8 @@ using GoodAI.Core.Utils;
 using YAXLib;
 
 using System.IO;
+using System.Drawing.Design;
+using System.Windows.Forms.Design;
 
 //namespace GoodAI.Modules.Vision
 namespace HTSLmodule.Worlds
@@ -24,12 +26,12 @@ namespace HTSLmodule.Worlds
     /// 
     /// <h3>Parameters</h3>
     /// <ul>
-    ///     <li> <b>UseCustomDataset:</b> If true, the world will attempt to read dataset by given RootFileName, Digits, Extension and NumFrames.</li>
-    ///     <li> <b>NumFrames:</b> Number of frames to be loaded from the dataset (starting from 0) and sequentially presented to output.</li>
-    ///     <li> <b>RootFileName:</b> Defines path to the file and base part of the name. Name is composed as follows: [RootFineName][numDigits][Extension]. 
-    ///     Where items are numbered from 0.</li>
-    ///     <li> <b>Digits:</b> How many digits is in the filename? E.g. for 5 it is "RootFilename_00000.png", "RootFilename_00001.png", etc..</li>
-    ///     <li> <b>Extension:</b> E.g. ".png"</li>
+    ///     <li> <b>UseCustomDataset:</b> If true, the world will attempt to read dataset by given RootFolder, Search, Extension and NumFrames.</li>
+    ///     <li> <b>NumFrames:</b> Number of frames to be loaded from the dataset (starting from the first file in folder) and sequentially presented to output.</li>
+    ///     <li> <b>RootFolder:</b> Defines path to the folder.</li>
+    ///     
+    ///     <li> <b>Search:</b> Defines Filename prefix. The Module looks in RootFolder for "{Search}*.{Extension}". The sortorder is alphanumerical.</li>
+    ///     <li> <b>Extension:</b> Defines Filename suffix. E.g. "png"</li>
     /// </ul>
     /// 
     /// Note that the same parameters are in the Load task. This task can be run once for changing the dataset at runtime.
@@ -37,7 +39,7 @@ namespace HTSLmodule.Worlds
     public class MyAnimationPredictionWorld : MyWorld
     {
         #region parameters
-        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 320)]
+        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 64)]
         public int ImageWidth
         {
             get { return m_iw; }
@@ -51,7 +53,7 @@ namespace HTSLmodule.Worlds
         }
         private int m_iw;
 
-        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 160)]
+        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 64)]
         public int ImageHeight
         {
             get { return m_ih; }
@@ -90,11 +92,12 @@ namespace HTSLmodule.Worlds
         //private Boolean m_isRGB = false;
 
         [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ""),
-        Description("Path to files including the name prefix")]
-        public String RootFileName { get; set; }
+        Description("Path to files")]
+        [EditorAttribute(typeof(FolderNameEditor), typeof(UITypeEditor))]
+        public String RootFolder { get; set; }
 
         [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ""),
-        Description("file name has the following form: {search}_*.{Extension}.")]
+        Description("file name has the following form: {search}*.{Extension}.")]
         public String Search { get; set; }
 
         [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = "jpg"),
@@ -104,7 +107,7 @@ namespace HTSLmodule.Worlds
         #endregion
 
         private int m_defNumFrames = 0;
-        private String m_defRootFileName = MyResources.GetMyAssemblyPath() + "\\" + @"\res\animationpredictionworld\";
+        private String m_defRootFolder = MyResources.GetMyAssemblyPath() + "\\" + @"\res\animationpredictionworld\";
         private String m_defExtension = "png";
         private String m_defSearch = "SwitchTest_";
         private bool m_defIsRGB = false;
@@ -151,7 +154,7 @@ namespace HTSLmodule.Worlds
             {
                 try
                 {
-                    this.m_bitmaps = LoadBitmaps(NumFrames, RootFileName, Search, Extension);
+                    this.m_bitmaps = LoadBitmaps(NumFrames, RootFolder, Search, Extension);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -182,7 +185,7 @@ namespace HTSLmodule.Worlds
             ImageHeight = 64;
             m_currentFrame = 0;
             IsRGB = false;
-            this.m_bitmaps = LoadBitmaps(m_defNumFrames, m_defRootFileName, m_defSearch, m_defExtension);
+            this.m_bitmaps = LoadBitmaps(m_defNumFrames, m_defRootFolder, m_defSearch, m_defExtension);
         }
 
         private Bitmap[] LoadBitmaps(int numFrames, String rootFileName, String search, String extension)
@@ -246,11 +249,12 @@ namespace HTSLmodule.Worlds
         public class MyAnimationPredictionLoadTask : MyTask<MyAnimationPredictionWorld>
         {
             [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ""),
-            Description("Path to files with file name prefix")]
-            public String RootFileName { get; set; }
+            Description("Path to files")]
+            [EditorAttribute(typeof(FolderNameEditor), typeof(UITypeEditor))]
+            public String RootFolder { get; set; }
 
             [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = ""),
-            Description("file name has the following form: {search}_*.{Extension}.")]
+            Description("file name has the following form: {search}*.{Extension}.")]
             public String Search { get; set; }
 
             [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = "jpg"),
@@ -269,7 +273,7 @@ namespace HTSLmodule.Worlds
             {
                 try
                 {
-                    Owner.m_bitmaps = Owner.LoadBitmaps(NumFrames, RootFileName, Search, Extension);
+                    Owner.m_bitmaps = Owner.LoadBitmaps(NumFrames, RootFolder, Search, Extension);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -299,7 +303,7 @@ namespace HTSLmodule.Worlds
             public bool StartFromFirstFrame { get; set; }
 
             [MyBrowsable, Category("Params"), YAXSerializableField(DefaultValue = 1),
-            Description("Number of Steps one image is visible")]
+            Description("Number of Steps an image is visible")]
             public int ExpositionTime { get; set; }
 
 
