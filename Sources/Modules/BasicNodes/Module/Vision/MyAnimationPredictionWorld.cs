@@ -188,18 +188,18 @@ namespace HTSLmodule.Worlds
             this.m_bitmaps = LoadBitmaps(m_defNumFrames, m_defRootFolder, m_defSearch, m_defExtension);
         }
 
-        private Bitmap[] LoadBitmaps(int numFrames, String rootFileName, String search, String extension)
+        private Bitmap[] LoadBitmaps(int numFrames, String rootFolder, String search, String extension)
         {
-            MyLog.INFO.WriteLine("opening: " + rootFileName);
+            MyLog.DEBUG.WriteLine("opening: " + rootFolder);
 
-            DirectoryInfo d = new DirectoryInfo(rootFileName);//Assuming Test is your Folder
+            DirectoryInfo d = new DirectoryInfo(rootFolder);//Assuming Test is your Folder
             FileInfo[] Files = d.GetFiles(search + "*." + extension); //Getting Text files
 
             int tmpNumFrames = Files.Length;
 
             if(tmpNumFrames == 0)
             {
-                MyLog.WARNING.WriteLine("No Images found in:" + rootFileName);
+                MyLog.WARNING.WriteLine("No Images found in:" + rootFolder);
                 return new Bitmap[0];
                 
             }
@@ -219,7 +219,7 @@ namespace HTSLmodule.Worlds
             int i = 0;
             foreach (FileInfo file in Files)
             {
-                fileName = rootFileName + file.Name;
+                fileName = rootFolder + "\\" + file.Name;
 
                 MyLog.INFO.WriteLine("loading: " + fileName);
 
