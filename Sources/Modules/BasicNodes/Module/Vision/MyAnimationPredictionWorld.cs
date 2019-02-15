@@ -12,6 +12,7 @@ using YAXLib;
 using System.IO;
 using System.Drawing.Design;
 using System.Windows.Forms.Design;
+using System.Text.RegularExpressions;
 
 //namespace GoodAI.Modules.Vision
 namespace HTSLmodule.Worlds
@@ -39,7 +40,7 @@ namespace HTSLmodule.Worlds
     public class MyAnimationPredictionWorld : MyWorld
     {
         #region parameters
-        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 64)]
+        [MyBrowsable, Category("Image Size"), YAXSerializableField(DefaultValue = 64)]
         public int ImageWidth
         {
             get { return m_iw; }
@@ -53,7 +54,7 @@ namespace HTSLmodule.Worlds
         }
         private int m_iw;
 
-        [MyBrowsable, Category("File Size"), YAXSerializableField(DefaultValue = 64)]
+        [MyBrowsable, Category("Image Size"), YAXSerializableField(DefaultValue = 64)]
         public int ImageHeight
         {
             get { return m_ih; }
@@ -100,6 +101,19 @@ namespace HTSLmodule.Worlds
         Description("file name has the following form: {search}*.{Extension}.")]
         public String Search { get; set; }
 
+        [MyBrowsable, Category("Annotiations"), YAXSerializableField(DefaultValue = ""),
+        Description("file with annotiations")]
+        [EditorAttribute(typeof(FileNameEditor), typeof(UITypeEditor))]
+        public String AdditionalDataset { get; set; }
+
+        [MyBrowsable, Category("Annotiations"), YAXSerializableField(DefaultValue = 0),
+        Description("number of features in data")]
+        public int NumFeatures { get; set; }
+
+        [MyBrowsable, Category("Annotiations"), YAXSerializableField(DefaultValue = @"\D+"),
+        Description("Reg. expression")]
+        public String Delimiter { get; set; }
+
         [MyBrowsable, Category("File"), YAXSerializableField(DefaultValue = "jpg"),
         Description("Example: jpg")]
         public String Extension { get; set; }
@@ -125,7 +139,15 @@ namespace HTSLmodule.Worlds
             set { SetOutput(0, value); }
         }
 
+        [MyOutputBlock(1)]
+        public MyMemoryBlock<float> Data
+        {
+            get { return GetOutput(1); }
+            set { SetOutput(1, value); }
+        }
+
         public Bitmap[] m_bitmaps;
+        public float[] m_annotiations;
 
         public MyAnimationPredictionLoadTask AnimationPredictionLoadTask { get; private set; }
         public MyAnimationPredictionPresentTask AnimationPredictionPresentTask { get; private set; }
@@ -143,6 +165,12 @@ namespace HTSLmodule.Worlds
                 Image.Count = ImageWidth * ImageHeight;
                 Image.Dims = new TensorDimensions(ImageWidth, ImageHeight);
             }
+
+            if(NumFeatures > 0)
+            {
+                Data.Count = NumFeatures;
+                Data.Dims = new TensorDimensions(NumFeatures);
+            }
                 
         }
 
@@ -155,6 +183,7 @@ namespace HTSLmodule.Worlds
                 try
                 {
                     this.m_bitmaps = LoadBitmaps(NumFrames, RootFolder, Search, Extension);
+                    this.m_annotiations = LoadDatafile(AdditionalDataset);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -201,7 +230,12 @@ namespace HTSLmodule.Worlds
             {
                 MyLog.WARNING.WriteLine("No Images found in:" + rootFolder);
                 return new Bitmap[0];
-                
+            }
+
+            // Dataset load
+            if(AdditionalDataset != "")
+            {
+                LoadDatafile(AdditionalDataset);
             }
 
             Bitmap[] bitmaps;
@@ -239,6 +273,50 @@ namespace HTSLmodule.Worlds
             }
 
             return bitmaps;
+        }
+
+        private float[] LoadDatafile(String DataFile) 
+        {
+            MyLog.DEBUG.WriteLine("loading datafile: " + DataFile);
+            // Read the file as one string.
+            String[] m_datalines = System.IO.File.ReadAllLines(DataFile);
+
+            MyLog.DEBUG.WriteLine("found " + m_datalines.Length + " rows");
+
+            if (m_numFrames > 0) MyLog.DEBUG.WriteLine("only read " + m_numFrames + " of them");
+
+            float[] data = new float[m_datalines.Length * NumFeatures];
+
+            for (int m_currentRow = 0; m_currentRow < m_datalines.Length; m_currentRow++)
+            {
+                String[] values = Regex.Split(m_datalines[m_currentRow], Delimiter);
+
+                if(values.Length < NumFeatures)
+                {
+                    throw new IndexOutOfRangeException("Incorrect number of features in line: " + m_currentRow);
+                }
+
+                for (int m_currentCol = 0; m_currentCol < NumFeatures; m_currentCol++)
+                {
+                    try
+                    {
+                        //MyLog.DEBUG.WriteLine("set: " + x + "," + y + " = " + values[x +1]);
+                        data[(m_currentRow * NumFeatures + m_currentCol)] = float.Parse(values[m_currentCol +1].Trim());
+                    }
+                    catch (Exception e)
+                    {
+                        MyLog.WARNING.WriteLine("incorrect float value at row: " + m_currentRow + " column " + m_currentCol + ": " + values[m_currentCol + 1]);
+                    }
+                }
+
+                if (m_currentRow >= m_numFrames)
+                {
+                    MyLog.INFO.WriteLine(m_numFrames + " loaded");
+                    return data;
+                }
+            }
+
+            return data;
         }
 
         /// <summary>
@@ -311,6 +389,9 @@ namespace HTSLmodule.Worlds
             byte[] byteArray;
             public override void Init(int nGPU)
             {
+
+                MyLog.DEBUG.WriteLine("images: " + Owner.m_bitmaps.Count());
+
                 Owner.m_steps = ExpositionTime;
 
                 if (StartFromFirstFrame)
@@ -326,10 +407,7 @@ namespace HTSLmodule.Worlds
                 {
                     Owner.m_currentFrame = 0;
                 }
-
-                MyLog.DEBUG.WriteLine("images: " + Owner.m_bitmaps.Count());
-                //MyLog.DEBUG.WriteLine("current image: " + Owner.m_currentFrame);
-
+                
                 image = new float[Owner.Image.Count];
 
                 int blocksize = Owner.ImageWidth * Owner.ImageHeight;
@@ -357,12 +435,27 @@ namespace HTSLmodule.Worlds
                 }
 
                 
-                // Create memory block from data
+                // Create memory block from image
                 byteArray = new byte[image.Length * 4];
                 Buffer.BlockCopy(image, 0, byteArray, 0, byteArray.Length);
                 Owner.Image.Fill(byteArray);
 
-                if(ExpositionTime > 0)
+
+                // Create memory block from data
+                byteArray = new byte[Owner.Data.Count * 4];
+
+                MyLog.DEBUG.WriteLine("copy from : " + (Owner.m_currentFrame * Owner.NumFeatures) + " count: " + Owner.NumFeatures);
+
+                Buffer.BlockCopy(Owner.m_annotiations, Owner.m_currentFrame * Owner.NumFeatures, byteArray, 0, byteArray.Length);
+
+                MyLog.DEBUG.WriteLine("copy from ");
+
+
+                Owner.Data.Fill(byteArray);
+
+                MyLog.DEBUG.WriteLine("filled ");
+
+                if (ExpositionTime > 0)
                 {
                     if (Owner.m_steps == 0)
                     {
